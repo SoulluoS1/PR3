@@ -1,0 +1,140 @@
+использование системы;
+использование System.Threading;
+использование System.Threading.Channels;
+использование System.Threading.Tasks;
+
+пространство имен somonov_gorodnikov_sergantov_bbbo_10_20
+{
+     производитель классов
+    {
+        private ChannelWriter<int> Писатель;
+        public Producer(ChannelWriter<int> _writer, CancellationToken tok)
+        {
+            Писатель = _writer;
+            Task.WaitAll(Run(tok));
+        }
+
+        выполнение частной асинхронной задачи (CancellationToken tok)
+        {
+            var r = new Random();
+            while (await Writer.WaitToWriteAsync())
+            {
+                если (tok.IsCancellationRequested)
+                {
+                    Console.WriteLine("\tПроизводитель остановлен.");
+                    Возврат;
+                }
+                если (Program.flag && Program.count <= 100)
+                {
+                    var item = r.Next(1, 101);
+                    await Writer.WriteAsync(элемент);
+                    Program.count += 1;
+                    Console.WriteLine($"\tЗаписанные данные: {item}" + $"Колличество: {Program.count}");
+                }
+            }
+        }
+    }
+
+    класс Потребительский
+    {
+        private ChannelReader<int> Reader;
+
+        public Consumer(ChannelReader<int> _reader, CancellationToken tok)
+        {
+            Reader = _reader;
+            Task.WaitAll(Run(tok));
+        }
+
+        выполнение частной асинхронной задачи (CancellationToken tok)
+        {
+            while (await Reader.WaitToReadAsync())
+            {
+                if (Reader.Count != 0)
+                {
+                    var item = await Reader.ReadAsync();
+                    Program.count -= 1;
+                    Console.WriteLine($"\tПолученные данные: {item}" + $"Колличество: {Program.count}");
+                }
+                if (Reader.Count >= 100)
+                {
+                    Program.flag = false;
+                }
+                else if (Reader.Count <= 80)
+                {
+                    Program.flag = true;
+                }
+                если (tok.IsCancellationRequested)
+                {
+                    if (Reader.Count == 0)
+                    {
+                        Console.WriteLine("\tПотребитель остановлен. ");
+                        Возврат;
+                    }
+                }
+            }
+        }
+    }
+
+    классная программа
+    {
+        статический публичный  флаг bool = true;
+        static public int count = 0;
+
+        static void printMenu()
+        {
+
+            bool flag = true;
+            while (flag)
+            {
+                Console.WriteLine("ГЛАВНОЕ МЕНЮ");
+                Console.WriteLine("1. Выполнить задание.");
+                Console.WriteLine("2. Очистить консоль.");
+                Console.Write("Выберите пункт меню: ");
+                int choice = int.Parse(Console.ReadLine());
+                switch (choice)
+                {
+                    случай 1:
+                        Channel<int> channel = Channel.CreateBounded<int>(200);
+                        var cts = new CancellationTokenSource();
+                        Задача[] потоки = новая задача[5];
+                        for (int i = 0; i < 5; i++)
+                        {
+                            если (i < 3)
+                            {
+                                streams[i] = Task.Run(() => { новый продюсер(channel.Writer, cts.Token); }, cts.Token);
+                            }
+                            ещё
+                            {
+                                streams[i] = Task.Run(() => { новый потребитель(channel.Reader, cts.Token); }, cts.Token);
+                            }
+                        }
+                        новый поток(() =>
+                        {
+                            для (; ; )
+                            {
+                                if (Console.ReadKey(true).Key == ConsoleKey.Q)
+                                {
+                                    cts.Cancel();
+                                }
+                            }
+                        })
+ { IsBackground = true }.Start();
+                        Task.WaitAll(потоки);
+
+                        перерыв;
+                    случай 2:
+                        Console.Clear();
+                        перерыв;
+                    По умолчанию:
+                        Console.WriteLine("\tВыбранного пункта нет в меню.");
+                        перерыв;
+                }
+            }
+        }
+
+        static void Main(string[] args)
+        {
+            printMenu();
+        }
+    }
+}
